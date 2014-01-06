@@ -505,14 +505,9 @@ int main( int argc, char *argv[] )
             }
             else {
                 /* buyer beware -- just print whatever we get */
-                /* davep 01-Aug-2010 ; I did the 0x7f a while ago (strips the
-                 * 8th bit) because our newer hardware is fucked up and the 8th
-                 * bit flips up and down randomly.
-                 */
-//                printf( "%c", databyte&0x7f );
 
-                /* Adding the iscntrl() to get rid of the goddamn mother
-                 * fucking ^M in my output files
+                /* Adding the iscntrl() to get rid of the annoying ^M in my
+                 * output files
                  */
 //                if( !iscntrl( databyte ) && databyte!=CR ) {
 //                    printf( "%c", databyte&0x7f );
@@ -524,13 +519,13 @@ int main( int argc, char *argv[] )
 
                 int printit = 1;
 
-                /* davep 10-May-2012 ; fucking bell pissing me off */
+                /* davep 10-May-2012 ; bell pissing me off */
                 if( databyte==0x07 ) {
                     printit = 0;
                 }
 
-                /* davep 19-aug-2011 ; Yukon uses \n\r not \r\n (WTF!?) so
-                 * filter out the stupid-ass 0x0d 
+                /* davep 19-aug-2011 ; found a platform that uses \n\r not \r\n
+                 * (buh?) so filter out the 0x0d 
                  */
                 if( databyte==0x0a ) {
                     printf( "%c", 0x0d );
@@ -539,20 +534,23 @@ int main( int argc, char *argv[] )
                     printit = 0;
                 }
 
-                /* davep 27-Oct-2011 ; quiet down people doing shit like:
+                /* davep 27-Oct-2011 ; quiet down people doing abnoxiousness like:
                  *
                  *  ******** color_pipe_set_config ENTRY config: 0x5fae64
                  *
                  */
-                if( databyte == '*' ) {
-                    printit = 0;
-                }
+//                if( databyte == '*' ) {
+//                    printit = 0;
+//                }
 
+                /* davep 01-Aug-2010 ; I did the 0x7f a while ago (strips the
+                 * 8th bit) because our newer hardware has issues and the 8th
+                 * bit flips up and down randomly.
+                 */
                 if( printit ) {
                     printf( "%c", databyte&0x7f );
                 }
             }
-
 
             if( opt_log_output ) {
                 fwrite( &databyte, 1, 1, binfile );
