@@ -32,7 +32,7 @@
 #include <readline/readline.h>
 #include <readline/history.h>
 
-#define VERSION "2.0.0"
+#define VERSION "2.5.0"
 
 /* values for parity */
 #define SERIAL_NO_PARITY    1
@@ -46,6 +46,11 @@
 /* values for stop bits */
 #define SERIAL_1_STOP_BITS  1 
 #define SERIAL_2_STOP_BITS  2 
+
+/* flow control */
+#define FLOW_CONTROL_NONE     1
+#define FLOW_CONTROL_HARDWARE 2
+#define FLOW_CONTROL_SOFTWARE 3
 
 #define FALSE 0
 #define TRUE  1
@@ -69,6 +74,9 @@ int parity = SERIAL_NO_PARITY;
 //int databits = SERIAL_7_DATA_BITS;
 int databits = SERIAL_8_DATA_BITS;
 int stopbits = SERIAL_1_STOP_BITS;
+//int flow_control = FLOW_CONTROL_SOFTWARE;
+//int flow_control = FLOW_CONTROL_HARDWARE;
+int flow_control = FLOW_CONTROL_NONE;
 
 int main_quit = 0;
 
@@ -206,10 +214,23 @@ int serial_open_port( void )
         assert( 0 );
     }
 
+    /* hardware flow control? */
+    if( flow_control==FLOW_CONTROL_HARDWARE ) {
+        newtio.c_cflag |= CRTSCTS;
+    }
 
     newtio.c_lflag = 0;
+    /* no additional lflags */
+
     newtio.c_iflag = 0; // | IXON | IXANY | IXOFF | IMAXBEL;
+
+    /* software flow control? */
+    if( flow_control==FLOW_CONTROL_SOFTWARE ) {
+        newtio.c_iflag |= (IXON | IXOFF | IXANY);
+    }
+
     newtio.c_oflag = 0;
+    /* no additional oflags */
 
     cfsetospeed( &newtio, baudrate );
     cfsetispeed( &newtio, baudrate );
@@ -260,7 +281,7 @@ void print_usage( void )
 
     printf( "ttysniff %s (%s) - read and dump data from serial port.\n", 
             VERSION, __DATE__ );
-    printf( "usage: ttysniff [-options] [-l logfile] [-b baud] path\n" );
+    printf( "usage: ttysniff [-options] [-l logfile] [-b baud] [-f flowcontrol] path\n" );
     printf( "  -h : show help\n" );
     printf( "  -p : print data as readable (default is to print as hex)\n" );
     printf( "  -l logfile : log traffic to binary file\n" );
@@ -268,6 +289,7 @@ void print_usage( void )
             baud_to_baud_string(DEFAULT_BAUD_RATE) );
     printf( "  -7 : 7 data bits\n" );
     printf( "  -8 : 8 data bits (default)\n" );
+    printf( "  -f [hard|soft] : enable hardware (RTS/CTS) or software (XON/XOFF) flow control\n" );
     printf( "  path : path to serial port (/dev/ttyS?)\n" );
     printf( "\n" );
     printf( "Available baud rates are: " );
@@ -290,7 +312,7 @@ void parse_args( int argc, char *argv[] )
     baudrate = DEFAULT_BAUD_RATE;
 
     while( 1 ) {
-        c = getopt( argc, argv, "hpl:b:78" );
+        c = getopt( argc, argv, "hpl:b:78f:" );
 
         if( c==-1 )
             break;
@@ -327,6 +349,19 @@ void parse_args( int argc, char *argv[] )
             case '8' :
                 /* 8 data bits */
                 databits = SERIAL_8_DATA_BITS;
+                break;
+
+            case 'f' :
+                if( strncmp( optarg, "hard", 4 ) == 0 ) {
+                    flow_control = FLOW_CONTROL_HARDWARE;
+                }
+                else if( strncmp( optarg, "soft", 4 ) == 0 ) {
+                    flow_control = FLOW_CONTROL_SOFTWARE;
+                }
+                else {
+                    fprintf( stderr, "Invalid flow control \"%s\"\n", optarg );
+                    exit(1);
+                }
                 break;
 
             case '?' :
