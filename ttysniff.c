@@ -28,6 +28,7 @@
 #include <signal.h>
 #include <sys/select.h>
 #include <ctype.h>
+#include <getopt.h>
 
 #define VERSION "2.5.0"
 
@@ -63,6 +64,7 @@ char logfile_name[FILENAME_MAX+1];
 
 int opt_log_output = FALSE; /* log output to file */
 int opt_hex_output = TRUE;  /* dump output as hex */
+int opt_strip_high_bit = FALSE;  /* strip high bit from all chars sent to stdout */ 
 
 speed_t baudrate = DEFAULT_BAUD_RATE;
 
@@ -287,6 +289,8 @@ void print_usage( void )
     printf( "  -7 : 7 data bits\n" );
     printf( "  -8 : 8 data bits (default)\n" );
     printf( "  -f [hard|soft] : enable hardware (RTS/CTS) or software (XON/XOFF) flow control\n" );
+    printf( "  --strip-high-bit : remove high bit (1<<8) from chars before printing\n" );
+    printf( "                     (doesn't effect logging to file or printing as hex)\n" );
     printf( "  path : path to serial port (/dev/ttyS?)\n" );
     printf( "\n" );
     printf( "Available baud rates are: " );
@@ -297,9 +301,38 @@ void print_usage( void )
     printf( "\n" );
 }
 
-void parse_args( int argc, char *argv[] )
+static int str_match( const char *s1, const char *s2, size_t maxlen )
 {
+    /* Strings must exactly match and must be exactly maxlen. The maxlen+1
+     * finds strings longer than maxlen
+     */
+    if( strnlen(s1,maxlen+1)<=maxlen &&
+        strnlen(s2,maxlen+1)<=maxlen &&
+        strncmp(s1,s2,maxlen)==0 ){
+        return TRUE;
+    }
+    return FALSE;
+}
+
+static int parse_long_option( const char *long_opt_name, 
+                              const char *long_opt_value )
+{
+    if( str_match( long_opt_name, "strip-high-bit", 14 ) ) {
+        opt_strip_high_bit = TRUE;
+    }
+
+    return 0;
+}
+
+int parse_args( int argc, char *argv[] )
+{
+    int retcode;
     char c;
+    static struct option long_options[] = {
+        { "strip-high-bit", 0, 0, 0 },   /* strip high bit (c&0x7f) */
+        { 0, 0, 0, 0 },
+    };
+    int long_index;
 
     if( argc == 1 ) {
         print_usage();
@@ -309,12 +342,20 @@ void parse_args( int argc, char *argv[] )
     baudrate = DEFAULT_BAUD_RATE;
 
     while( 1 ) {
-        c = getopt( argc, argv, "hpl:b:78f:" );
+        c = getopt_long( argc, argv, "hpl:b:78f:", long_options, &long_index );
 
         if( c==-1 )
             break;
 
         switch( c ) {
+            case 0 : 
+                /* handle long option */
+                retcode = parse_long_option( long_options[long_index].name, optarg );
+                if( retcode != 0 ) {
+                    exit(1);
+                }
+                break;
+
             case 'h' :
                 print_usage();
                 exit(1);
@@ -385,6 +426,7 @@ void parse_args( int argc, char *argv[] )
     /* XXX temp debug */
 //    fprintf( stderr, "baud=%ld port=%s\n", baudrate, serial_port );
 
+    return 0;
 }
 
 int
@@ -495,8 +537,6 @@ int main( int argc, char *argv[] )
                 break;
             }
 
-//            printf( "%#04x ", databyte );
-
             if( databyte == 0x03 ) {
                 /* Ctrl-C? */
                 break;
@@ -538,17 +578,9 @@ int main( int argc, char *argv[] )
             else {
                 /* buyer beware -- just print whatever we get */
 
-                /* Adding the iscntrl() to get rid of the annoying ^M in my
-                 * output files
+                /* added some simple "filtering"; TODO add regex filtering so
+                 * really annoying stuff never hits human eyeballs
                  */
-//                if( !iscntrl( databyte ) && databyte!=CR ) {
-//                    printf( "%c", databyte&0x7f );
-//                }
-//                else if( databyte==LF ) {
-//                    printf( "\r\n" );
-//                }
-//                printf( "%c", databyte );
-
                 int printit = 1;
 
                 /* davep 10-May-2012 ; bell pissing me off */
@@ -566,7 +598,7 @@ int main( int argc, char *argv[] )
                     printit = 0;
                 }
 
-                /* davep 27-Oct-2011 ; quiet down people doing abnoxiousness like:
+                /* davep 27-Oct-2011 ; quiet down people doing obnoxious stuff like:
                  *
                  *  ******** color_pipe_set_config ENTRY config: 0x5fae64
                  *
@@ -580,8 +612,14 @@ int main( int argc, char *argv[] )
                  * bit flips up and down randomly.
                  */
                 if( printit ) {
-                    printf( "%c", databyte&0x7f );
+                    if( opt_strip_high_bit ) {
+                        printf( "%c", databyte&0x7f );
+                    }
+                    else {
+                        printf( "%c", databyte );
+                    }
                 }
+
             }
 
             if( opt_log_output ) {
