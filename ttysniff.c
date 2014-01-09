@@ -29,9 +29,6 @@
 #include <sys/select.h>
 #include <ctype.h>
 
-#include <readline/readline.h>
-#include <readline/history.h>
-
 #define VERSION "2.5.0"
 
 /* values for parity */
