@@ -9,7 +9,17 @@
  *      the data to stdout.  Useful since it can dump in hex
  *      and set serial port settings.
  *
- *    Reference Documentation:
+ *      Some more raison d'etre:
+ *
+ *      Originally I created this program to read only. The target application
+ *      was the Rx side of a serial port splitter. I was doing a lot of serial
+ *      port debugging/reverse engineering at the time. 
+ *
+ *      Over time, I added features that enabled ttysniff to be a simple
+ *      terminal. Reads from stdin, writes to serial. Reads from serial, writes
+ *      to stdout. The native terminal (xterm, osx Terminal, whatever) handles
+ *      the control characters.
+ *
  ******************************************************/
 
 /* $Id: ttysniff.c 560 2010-03-12 16:22:11Z davep $ */
@@ -30,7 +40,7 @@
 #include <ctype.h>
 #include <getopt.h>
 
-#define VERSION "2.5.0"
+#define VERSION "2.6.0"
 
 /* values for parity */
 #define SERIAL_NO_PARITY    1
@@ -62,9 +72,19 @@
 char serial_port[FILENAME_MAX+1];
 char logfile_name[FILENAME_MAX+1];
 
-int opt_log_output = FALSE; /* log output to file */
-int opt_hex_output = TRUE;  /* dump output as hex */
-int opt_strip_high_bit = FALSE;  /* strip high bit from all chars sent to stdout */ 
+/* log output to file */
+int opt_log_output = FALSE; 
+
+/* dump output as hex */
+int opt_hex_output = TRUE;  
+
+/* strip high bit from all chars sent to stdout */ 
+int opt_strip_high_bit = FALSE;  
+
+/* default is to transmit CRLF on CR from stdin; when true, only the CR is
+ * transmitted to remote 
+ */
+int opt_bare_cr = FALSE;  
 
 speed_t baudrate = DEFAULT_BAUD_RATE;
 
@@ -281,17 +301,20 @@ void print_usage( void )
     printf( "ttysniff %s (%s) - read and dump data from serial port.\n", 
             VERSION, __DATE__ );
     printf( "usage: ttysniff [-options] [-l logfile] [-b baud] [-f flowcontrol] path\n" );
-    printf( "  -h : show help\n" );
-    printf( "  -p : print data as readable (default is to print as hex)\n" );
-    printf( "  -l logfile : log traffic to binary file\n" );
-    printf( "  -b baudrate : set baud rate (default=%s)\n", 
+    printf( "  -h                   show this help\n" );
+    printf( "  -p                   print data as readable (default is to print as hex)\n" );
+    printf( "  -l logfile           log traffic to binary file\n" );
+    printf( "  -b baudrate          set baud rate (default=%s)\n", 
             baud_to_baud_string(DEFAULT_BAUD_RATE) );
-    printf( "  -7 : 7 data bits\n" );
-    printf( "  -8 : 8 data bits (default)\n" );
-    printf( "  -f [hard|soft] : enable hardware (RTS/CTS) or software (XON/XOFF) flow control\n" );
-    printf( "  --strip-high-bit : remove high bit (1<<8) from chars before printing\n" );
-    printf( "                     (doesn't effect logging to file or printing as hex)\n" );
-    printf( "  path : path to serial port (/dev/ttyS?)\n" );
+    printf( "  -7                   7 data bits\n" );
+    printf( "  -8                   8 data bits (default)\n" );
+    printf( "  -f [hard|soft]       enable hardware (RTS/CTS) or software (XON/XOFF) flow control\n" );
+    printf( "                       (default is no flow control)\n" );
+    printf( "  --strip-high-bit     remove high bit (1<<8) from chars before printing\n" );
+    printf( "                       (doesn't effect logging to file or printing as hex)\n" );
+    printf( "  --bare-cr            don't send CRLF when reading CR from stdin\n" );
+    printf( "                       (default is to send CRLF when reading CR on input)\n" );
+    printf( "  path                 path to serial port (e.g., /dev/ttyS0)\n" );
     printf( "\n" );
     printf( "Available baud rates are: " );
 
@@ -320,6 +343,10 @@ static int parse_long_option( const char *long_opt_name,
     if( str_match( long_opt_name, "strip-high-bit", 14 ) ) {
         opt_strip_high_bit = TRUE;
     }
+    else if( str_match( long_opt_name, "bare-cr", 8 ) ) {
+        /* don't send a LF to remote side when read CR from stdin */
+        opt_bare_cr = TRUE;
+    }
 
     return 0;
 }
@@ -330,6 +357,7 @@ int parse_args( int argc, char *argv[] )
     char c;
     static struct option long_options[] = {
         { "strip-high-bit", 0, 0, 0 },   /* strip high bit (c&0x7f) */
+        { "bare-cr", 0, 0, 0 }, /* don't send extra LF on reading CR from stdin */
         { 0, 0, 0, 0 },
     };
     int long_index;
@@ -543,7 +571,7 @@ int main( int argc, char *argv[] )
             }
 
             write( fd, &databyte, 1 );
-            if( databyte==CR ) {
+            if( databyte==CR && !opt_bare_cr ) {
                 write( fd, &LF, 1 );
             }
         }
