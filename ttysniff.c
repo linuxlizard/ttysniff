@@ -511,7 +511,7 @@ int main( int argc, char *argv[] )
     init_signals();
 
     if( opt_log_output ) {
-        binfile = fopen( logfile_name, "w" );
+        binfile = fopen( logfile_name, "a" );
         if( binfile == NULL ) {
             fprintf( stderr, "Unable to open log file \"%s\" : %s\n", 
                     logfile_name, strerror(errno) );
