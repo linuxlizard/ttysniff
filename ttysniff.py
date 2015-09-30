@@ -224,22 +224,25 @@ if __name__ == '__main__' :
 	#termios.tcflush( fd, termios.TCIOFLUSH )
 	#print retcode
 
-	f = os.fdopen(fd)
-	while 1 :
-		s = f.readline()
-		print("{}".format(s))
+	with os.fdopen(fd) as f:
+		for s in f:
+			print(s,end="")
 
-	while 1 :
-		print("read in")
-		buf = os.read( fd, 1 )
-		print("read out")
-		if opt_hex_output :
-			for c in buf :
-				sys.stdout.write( "{0:02x} ".format(c) )
-		else :
-			s = buf.decode("utf-8")
-			sys.stdout.write(s)
-		sys.stdout.flush()
+#	while 1 :
+#		s = f.readline()
+#		print("{}".format(s),end="")
+
+#	while 1 :
+#		print("read in")
+#		buf = os.read( fd, 1 )
+#		print("read out")
+#		if opt_hex_output :
+#			for c in buf :
+#				sys.stdout.write( "{0:02x} ".format(c) )
+#		else :
+#			s = buf.decode("utf-8")
+#			sys.stdout.write(s)
+#		sys.stdout.flush()
 
 	os.close( fd )
 
