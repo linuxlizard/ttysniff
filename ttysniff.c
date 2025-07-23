@@ -13,7 +13,7 @@
  *
  *      Originally I created this program to read only. The target application
  *      was the Rx side of a serial port splitter. I was doing a lot of serial
- *      port debugging/reverse engineering at the time. 
+ *      port debugging/reverse engineering at the time.
  *
  *      Over time, I added features that enabled ttysniff to be a simple
  *      terminal. Reads from stdin, writes to serial. Reads from serial, writes
@@ -48,12 +48,12 @@
 #define SERIAL_ODD_PARITY   4
 
 /* values for data bits */
-#define SERIAL_8_DATA_BITS  8 
-#define SERIAL_7_DATA_BITS  7 
+#define SERIAL_8_DATA_BITS  8
+#define SERIAL_7_DATA_BITS  7
 
 /* values for stop bits */
-#define SERIAL_1_STOP_BITS  1 
-#define SERIAL_2_STOP_BITS  2 
+#define SERIAL_1_STOP_BITS  1
+#define SERIAL_2_STOP_BITS  2
 
 /* flow control */
 #define FLOW_CONTROL_NONE     1
@@ -66,8 +66,8 @@
 #define DEFAULT_BAUD_RATE  B9600
 //#define BAUD_RATE  B19200
 //#define BAUD_RATE  B38400
-            
-#define NON_BLOCKING_SERIAL 
+
+#define NON_BLOCKING_SERIAL
 
 char serial_port[FILENAME_MAX+1];
 char logfile_name[FILENAME_MAX+1];
@@ -76,18 +76,18 @@ char logfile_name[FILENAME_MAX+1];
 int print_timestamps = FALSE;
 
 /* log output to file */
-int opt_log_output = FALSE; 
+int opt_log_output = FALSE;
 
 /* dump output as hex */
-int opt_hex_output = TRUE;  
+int opt_hex_output = TRUE;
 
-/* strip high bit from all chars sent to stdout */ 
-int opt_strip_high_bit = FALSE;  
+/* strip high bit from all chars sent to stdout */
+int opt_strip_high_bit = FALSE;
 
 /* default is to transmit CRLF on CR from stdin; when true, only the CR is
- * transmitted to remote 
+ * transmitted to remote
  */
-int opt_bare_cr = FALSE;  
+int opt_bare_cr = FALSE;
 
 speed_t baudrate = DEFAULT_BAUD_RATE;
 
@@ -137,8 +137,8 @@ void signal_term( int signum )
 void init_signals( void )
 {
     int uerr;
-    struct sigaction sigterm; 
-    struct sigaction sigint; 
+    struct sigaction sigterm;
+    struct sigaction sigint;
 
     memset( &sigterm, 0, sizeof(sigterm) );
     sigterm.sa_handler = signal_term;
@@ -163,12 +163,12 @@ int serial_open_port( void )
     struct termios oldtio, newtio;
     int fd;
 
-    /* stupid human check -- I've been running this thing 
+    /* stupid human check -- I've been running this thing
      *  as root (very very dumb) so I don't want to accidently
      *  write DNP to /dev/hda1 or something equally tragic.
      */
 //    if( strncmp( path, "/dev/ttyS", 9 ) != 0 ) {
-//        LOG_MESSAGE1( LOG_ERR, "\"%s\" not a serial port.", path );        
+//        LOG_MESSAGE1( LOG_ERR, "\"%s\" not a serial port.", path );
 //        return ERR_FAIL;
 //    }
 
@@ -182,7 +182,7 @@ int serial_open_port( void )
     fd = open( serial_port, O_RDWR|O_NOCTTY );
 #endif
     if( fd < 0 ) {
-        fprintf( stderr, "open() of %s failed : %s", 
+        fprintf( stderr, "open() of %s failed : %s",
                 serial_port, strerror(errno) );
         return -1;
     }
@@ -301,14 +301,14 @@ void print_usage( void )
 {
     int i;
 
-    printf( "ttysniff %s (%s) - read and dump data from serial port.\n", 
+    printf( "ttysniff %s (%s) - read and dump data from serial port.\n",
             VERSION, __DATE__ );
     printf( "usage: ttysniff [-options] [-l logfile] [-b baud] [-f flowcontrol] path\n" );
     printf( "  -h                   show this help\n" );
     printf( "  -p                   print data as readable (default is to print as hex)\n" );
     printf( "  -t                   print timestamps on newlines\n" );
     printf( "  -l logfile           log traffic to binary file\n" );
-    printf( "  -b baudrate          set baud rate (default=%s)\n", 
+    printf( "  -b baudrate          set baud rate (default=%s)\n",
             baud_to_baud_string(DEFAULT_BAUD_RATE) );
     printf( "  -7                   7 data bits\n" );
     printf( "  -8                   8 data bits (default)\n" );
@@ -341,7 +341,7 @@ static int str_match( const char *s1, const char *s2, size_t maxlen )
     return FALSE;
 }
 
-static int parse_long_option( const char *long_opt_name, 
+static int parse_long_option( const char *long_opt_name,
                               const char *long_opt_value )
 {
     if( str_match( long_opt_name, "strip-high-bit", 14 ) ) {
@@ -380,7 +380,7 @@ int parse_args( int argc, char *argv[] )
             break;
 
         switch( c ) {
-            case 0 : 
+            case 0 :
                 /* handle long option */
                 retcode = parse_long_option( long_options[long_index].name, optarg );
                 if( retcode != 0 ) {
@@ -448,7 +448,7 @@ int parse_args( int argc, char *argv[] )
         }
     }
 
-    
+
     /* get serial port name */
     if (optind < argc) {
         strncpy( serial_port, argv[optind++], FILENAME_MAX );
@@ -477,7 +477,7 @@ terminal_to_raw( struct termios *save_tios )
     /* get a copy well save until we restore stdin at exit */
     retcode = tcgetattr( stdin_fileno, save_tios );
     if( retcode < 0 ) {
-        fprintf( stderr, "tcgetattr() failed to get stdin term attributes: %d %s\n", 
+        fprintf( stderr, "tcgetattr() failed to get stdin term attributes: %d %s\n",
                 errno, strerror(errno));
         return -1;
     }
@@ -485,7 +485,7 @@ terminal_to_raw( struct termios *save_tios )
     /* get them again so we can muck with them */
     retcode = tcgetattr( stdin_fileno, &newtios );
     if( retcode < 0 ) {
-        fprintf( stderr, "tcgetattr() failed to get stdin term attributes: %d %s\n", 
+        fprintf( stderr, "tcgetattr() failed to get stdin term attributes: %d %s\n",
                 errno, strerror(errno));
         return -1;
     }
@@ -495,7 +495,7 @@ terminal_to_raw( struct termios *save_tios )
     /* set stdin to raw */
     retcode = tcsetattr( stdin_fileno, TCSANOW, &newtios );
     if( retcode < 0 ) {
-        fprintf( stderr, "tcsetattr() failed to set stdin term attributes: %d %s\n", 
+        fprintf( stderr, "tcsetattr() failed to set stdin term attributes: %d %s\n",
                 errno, strerror(errno));
         return -1;
     }
@@ -523,7 +523,7 @@ int main( int argc, char *argv[] )
     if( opt_log_output ) {
         binfile = fopen( logfile_name, "a" );
         if( binfile == NULL ) {
-            fprintf( stderr, "Unable to open log file \"%s\" : %s\n", 
+            fprintf( stderr, "Unable to open log file \"%s\" : %s\n",
                     logfile_name, strerror(errno) );
             exit(1);
         }
@@ -566,11 +566,11 @@ int main( int argc, char *argv[] )
                     strerror(errno) );
             continue;
         }
-        
+
         if( FD_ISSET( stdin_fileno, &read_fds ) ) {
             err = read( stdin_fileno, &databyte, 1 );
             if( err <= 0 ) {
-                fprintf( stderr, "read stdin err=%d errno=%d (%s)\r\n", 
+                fprintf( stderr, "read stdin err=%d errno=%d (%s)\r\n",
                         err, errno, strerror(errno) );
                 break;
             }
@@ -589,7 +589,7 @@ int main( int argc, char *argv[] )
         if( FD_ISSET( fd, &read_fds ) ) {
             err = read( fd, &databyte, 1 );
             if( err <= 0 ) {
-                fprintf( stderr, "read fd err=%d errno=%d (%s)\r\n", 
+                fprintf( stderr, "read fd err=%d errno=%d (%s)\r\n",
                         err, errno, strerror(errno) );
                 break;
             }
@@ -627,7 +627,7 @@ int main( int argc, char *argv[] )
                 }
 
                 /* davep 19-aug-2011 ; found a platform that uses \n\r not \r\n
-                 * (buh?) so filter out the 0x0d 
+                 * (buh?) so filter out the 0x0d
                  */
                 if( databyte==0x0a ) {
                     printf( "%c", 0x0d );
@@ -687,16 +687,16 @@ int main( int argc, char *argv[] )
     }
 
     close( fd );
-    
+
     if( opt_log_output ) {
         fclose( binfile );
     }
 
-    /* set stdin back to starting point */  
+    /* set stdin back to starting point */
     fprintf( stderr, "restoring stdin to previous state\r\n" );
     err = tcsetattr( stdin_fileno, TCSANOW, &stdin_tios );
     if( err < 0 ) {
-        fprintf( stderr, "tcsetattr() failed to set stdin term attributes: %d %s\n", 
+        fprintf( stderr, "tcsetattr() failed to set stdin term attributes: %d %s\n",
                 errno, strerror(errno));
         /* keep going and hope for the best */
     }
