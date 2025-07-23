@@ -72,6 +72,9 @@
 char serial_port[FILENAME_MAX+1];
 char logfile_name[FILENAME_MAX+1];
 
+/* print timestamps after newline */
+int print_timestamps = FALSE;
+
 /* log output to file */
 int opt_log_output = FALSE; 
 
@@ -303,6 +306,7 @@ void print_usage( void )
     printf( "usage: ttysniff [-options] [-l logfile] [-b baud] [-f flowcontrol] path\n" );
     printf( "  -h                   show this help\n" );
     printf( "  -p                   print data as readable (default is to print as hex)\n" );
+    printf( "  -t                   print timestamps on newlines\n" );
     printf( "  -l logfile           log traffic to binary file\n" );
     printf( "  -b baudrate          set baud rate (default=%s)\n", 
             baud_to_baud_string(DEFAULT_BAUD_RATE) );
@@ -370,7 +374,7 @@ int parse_args( int argc, char *argv[] )
     baudrate = DEFAULT_BAUD_RATE;
 
     while( 1 ) {
-        c = getopt_long( argc, argv, "hpl:b:78f:", long_options, &long_index );
+        c = getopt_long( argc, argv, "hptl:b:78f:", long_options, &long_index );
 
         if( c==-1 )
             break;
@@ -397,6 +401,10 @@ int parse_args( int argc, char *argv[] )
 
             case 'p' :
                 opt_hex_output = FALSE;
+                break;
+
+            case 't':
+                print_timestamps = TRUE;
                 break;
 
             case 'b' :
@@ -505,7 +513,9 @@ int main( int argc, char *argv[] )
     fd_set read_fds;
     int max_fd;
     struct termios stdin_tios;
-    
+    struct timeval tv;
+    int last_char_was_newline = TRUE;
+
     parse_args( argc, argv );
 
     init_signals();
@@ -621,6 +631,11 @@ int main( int argc, char *argv[] )
                  */
                 if( databyte==0x0a ) {
                     printf( "%c", 0x0d );
+                    last_char_was_newline = TRUE;
+                }
+                else
+                {
+                    last_char_was_newline = FALSE;
                 }
                 if( databyte==0x0d ) {
                     printit = 0;
@@ -640,6 +655,18 @@ int main( int argc, char *argv[] )
                  * bit flips up and down randomly.
                  */
                 if( printit ) {
+
+                    /* print the timestamp at the just before the first character on a line (if enabled) */
+                    if(print_timestamps && last_char_was_newline) {
+                        struct tm *tm;
+                        char s[64];
+
+                        gettimeofday(&tv, NULL);
+                        tm = localtime(&tv.tv_sec);
+                        strftime(s, sizeof(s), "%Y-%m-%d|%H:%M:%S", tm);
+                        printf("[%s.%03d] ", s, tv.tv_usec / 1000);
+                    }
+
                     if( opt_strip_high_bit ) {
                         printf( "%c", databyte&0x7f );
                     }
